@@ -35,7 +35,7 @@ class Plane:
             initial_coefficient = n[initial_index]
 
             basepoint_coords[initial_index] = c/initial_coefficient
-            self.basepoint = Vector(basepoint_coords)
+            self.basepoint = Vector(basepoint_coords).coordinates
 
         except Exception as e:
             if str(e) == Plane.NO_NONZERO_ELTS_FOUND_MSG:
