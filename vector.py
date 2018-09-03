@@ -136,6 +136,12 @@ class Vector():
         if self.dimension == 3 and v.dimension == 3:
             return self.area_of_parallelogram(v) / 2
 
+    def __getitem__(self, i):
+        return self.coordinates[i]
+
+    def __iter__(self):
+        return self.coordinates.__iter__()
+
 def test_vector_plus():
     u = Vector([1,2,3])
     v = Vector([1,1,1])
