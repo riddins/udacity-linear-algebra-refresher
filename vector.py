@@ -12,7 +12,7 @@ class Vector():
         try:
             if not coordinates:
                 raise ValueError
-            self.coordinates = tuple(coordinates)
+            self.coordinates = tuple([Decimal(x) for x in coordinates])
             self.dimension = len(coordinates)
 
         except ValueError:
@@ -68,7 +68,7 @@ class Vector():
         try:
             u1 = self.normalized()
             u2 = v.normalized()
-            angle_in_radians = math.acos(round(u1.dot(u2), 10))
+            angle_in_radians = math.acos(u1.dot(u2))
 
             if in_degrees:
                 return math.degrees(angle_in_radians)
@@ -142,51 +142,45 @@ class Vector():
     def __iter__(self):
         return self.coordinates.__iter__()
 
-def test_vector_plus():
-    u = Vector([1,2,3])
-    v = Vector([1,1,1])
-    return u.plus(v) == Vector([x + y for x, y in zip(u.coordinates, v.coordinates)])
+u = Vector([1,2,3])
+v = Vector([1,1,1])
+assert u.plus(v) == Vector([x + y for x, y in zip(u.coordinates, v.coordinates)])
 
-def test_vector_minus():
-    u = Vector([1,2,3])
-    v = Vector([1,1,1])
-    return u.minus(v) == Vector([x - y for x, y in zip(u.coordinates, v.coordinates)])
+u = Vector([1,2,3])
+v = Vector([1,1,1])
+assert u.minus(v) == Vector([x - y for x, y in zip(u.coordinates, v.coordinates)])
 
-def test_vector_times_scalar():
-    u = Vector([1,2,3])
-    s = 2
-    return u.times_scalar(s) == Vector([x * s for x in u.coordinates])
+u = Vector([1,2,3])
+s = 2
+u.times_scalar(s) == Vector([x * s for x in u.coordinates])
 
-def test_vector_magnitude():
-    u = Vector([1,2,3])
-    return u.magnitude() == math.sqrt(sum([x**2 for x in u.coordinates]))
+u = Vector([1,2,3])
+assert u.magnitude() == math.sqrt(sum([x**2 for x in u.coordinates]))
 
-def test_vector_normalized():
-    u = Vector([1,2,3])
-    return u.normalized() == u.times_scalar(1.0 / u.magnitude())
+u = Vector([1,2,3])
+assert u.normalized() == u.times_scalar(Decimal(1.0) / u.magnitude())
 
-def test_vector_dot():
-    u = Vector([1,2,3])
-    v = Vector([3,4,5])
-    return u.dot(v) == sum([x * y for x, y in zip(u.coordinates, v.coordinates)])
+u = Vector([1,2,3])
+v = Vector([3,4,5])
+assert u.dot(v) == sum([x * y for x, y in zip(u.coordinates, v.coordinates)])
 
-def test_vector_angle_with():
-    u = Vector([1,2,3])
-    v = Vector([4,5,6])
-    return u.angle_with(v) == math.acos(u.dot(v) / (u.magnitude() * v.magnitude()))
+u = Vector([1,2,3])
+v = Vector([4,5,6])
 
-def test_vector_is_parallel():
-    u = Vector([1,2,3])
-    v = u.normalized()
-    return u.is_parallel(v) and u.is_parallel(v.times_scalar(-1))
+actual = u.angle_with(v)
+expected = math.acos(u.dot(v) / (u.magnitude() * v.magnitude()))
+#print('actual: {}, expected: {}'.format(actual, expected))
+assert actual == expected
 
-def test_vector_is_parallel_negative_case():
-    u = Vector([1,2,3])
-    v = Vector([1,2,4])
-    return u.is_parallel(v) == False 
+u = Vector([1,2,3])
+v = u.normalized()
+assert u.is_parallel(v) and u.is_parallel(v.times_scalar(-1))
 
-def test_vector_is_orthogonal():
-    u = Vector([1,2,3])
-    v = Vector([1,1,-1])
-    return u.dot(v) == 0 and u.is_orthogonal(v)
+u = Vector([1,2,3])
+v = Vector([1,2,4])
+assert u.is_parallel(v) == False 
+
+u = Vector([1,2,3])
+v = Vector([1,1,-1])
+assert u.dot(v) == 0 and u.is_orthogonal(v)
 
