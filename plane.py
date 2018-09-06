@@ -101,6 +101,18 @@ class Plane:
         return self.normal_vector.is_parallel(l.normal_vector)
     
     def __eq__(self, l):
+        if self.normal_vector.is_zero():
+            if not l.normal_vector.is_zero():
+                return False 
+            else:
+                diff = self.constant_term - l.constant_term
+                return MyDecimal(diff).is_near_zero()
+        elif l.normal_vector.is_zero():
+            return False
+
+        if not self.parallel_to(l):
+            return False
+
         bp1 = Vector(self.basepoint)
         bp2 = Vector(l.basepoint)
         v = bp1.minus(bp2)
