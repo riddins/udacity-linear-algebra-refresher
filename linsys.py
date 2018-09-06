@@ -70,6 +70,34 @@ class LinearSystem(object):
         return indices
 
 
+    def compute_triangular_form(self):
+        system = deepcopy(self)
+        non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
+        i = 0
+        while (i < len(non_zero_indices)):
+            swapped = False
+            j = 1
+            while (j < len(non_zero_indices) - i):
+                if non_zero_indices[i] <= non_zero_indices[i+j]:
+                    index_of_coefficient = non_zero_indices[i]
+                    coefficient = system.planes[i+j].normal_vector[index_of_coefficient]
+                    if coefficient != 0:
+                        if system.planes[i] == system.planes[i+j]:
+                            system.planes[i+j] = Plane()
+                        else:
+                            system.add_multiple_times_row_to_row(coefficient * -1, i, i+j)
+                            non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
+                    j += 1
+                else:
+                    system.swap_rows(i, i+j)
+                    non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
+                    swapped = True
+                    break
+            if not swapped:
+                i += 1
+
+        return system
+
     def __len__(self):
         return len(self.planes)
 
@@ -174,3 +202,42 @@ if not (s[0] == Plane(normal_vector=Vector(['-10','-10','-10']), constant_term='
         s[2] == Plane(normal_vector=Vector(['-1','-1','1']), constant_term='-3') and
         s[3] == p3):
     print('test case 9 failed')
+
+# 20 Quiz: Coding Triagular Form
+p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['0','1','1']), constant_term='2')
+s = LinearSystem([p1,p2])
+t = s.compute_triangular_form()
+if not (t[0] == p1 and
+        t[1] == p2):
+    print('Triangular Form: test case 1 failed')
+
+p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['1','1','1']), constant_term='2')
+s = LinearSystem([p1,p2])
+t = s.compute_triangular_form()
+if not (t[0] == p1 and
+        t[1] == Plane(constant_term='1')):
+    print('Triangular Form: test case 2 failed')
+
+p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['0','1','0']), constant_term='2')
+p3 = Plane(normal_vector=Vector(['1','1','-1']), constant_term='3')
+p4 = Plane(normal_vector=Vector(['1','0','-2']), constant_term='2')
+s = LinearSystem([p1,p2,p3,p4])
+t = s.compute_triangular_form()
+if not (t[0] == p1 and
+        t[1] == p2 and
+        t[2] == Plane(normal_vector=Vector(['0','0','-2']), constant_term='2') and
+        t[3] == Plane()):
+    print('Triangular Form: test case 3 failed')
+
+p1 = Plane(normal_vector=Vector(['0','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['1','-1','1']), constant_term='2')
+p3 = Plane(normal_vector=Vector(['1','2','-5']), constant_term='3')
+s = LinearSystem([p1,p2,p3])
+t = s.compute_triangular_form()
+if not (t[0] == Plane(normal_vector=Vector(['1','-1','1']), constant_term='2') and
+        t[1] == Plane(normal_vector=Vector(['0','1','1']), constant_term='1') and
+        t[2] == Plane(normal_vector=Vector(['0','0','-9']), constant_term='-2')):
+    print('Triangular Form: test case 4 failed')
