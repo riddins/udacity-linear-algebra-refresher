@@ -52,7 +52,7 @@ class Vector():
 
     def magnitude(self):
         coordinates_squared = [x**2 for x in self.coordinates]
-        return Decimal(math.sqrt(sum(coordinates_squared)))
+        return Decimal(sum(coordinates_squared)).sqrt()
 
     def normalized(self):
         try:
@@ -155,7 +155,7 @@ s = 2
 u.times_scalar(s) == Vector([x * s for x in u.coordinates])
 
 u = Vector([1,2,3])
-assert u.magnitude() == math.sqrt(sum([x**2 for x in u.coordinates]))
+assert u.magnitude() == Decimal(sum([x**2 for x in u.coordinates])).sqrt()
 
 u = Vector([1,2,3])
 assert u.normalized() == u.times_scalar(Decimal(1.0) / u.magnitude())
