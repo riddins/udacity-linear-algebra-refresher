@@ -74,29 +74,66 @@ class LinearSystem(object):
         system = deepcopy(self)
         non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
         i = 0
-        while (i < len(non_zero_indices)):
+        while (i < len(system.planes)):
             swapped = False
             j = 1
-            while (j < len(non_zero_indices) - i):
-                if non_zero_indices[i] <= non_zero_indices[i+j]:
+            while (j < len(system.planes) - i):
+                if system.planes[i] == system.planes[i+j]:
+                    system.planes[i+j] = Plane()
+                elif non_zero_indices[i] == non_zero_indices[i+j]:
                     index_of_coefficient = non_zero_indices[i]
-                    coefficient = system.planes[i+j].normal_vector[index_of_coefficient]
-                    if coefficient != 0:
-                        if system.planes[i] == system.planes[i+j]:
-                            system.planes[i+j] = Plane()
-                        else:
-                            system.add_multiple_times_row_to_row(coefficient * -1, i, i+j)
-                            non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
-                    j += 1
-                else:
+                    coefficient = -1 * system.planes[i+j].normal_vector[index_of_coefficient] / system[i].normal_vector[index_of_coefficient]
+                    system.add_multiple_times_row_to_row(coefficient, i, i+j)
+                    non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
+                elif non_zero_indices[i] > non_zero_indices[i+j]:
                     system.swap_rows(i, i+j)
                     non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
                     swapped = True
                     break
+                j += 1
             if not swapped:
                 i += 1
-
         return system
+
+
+    def compute_rref(self):
+        tf = self.compute_triangular_form()
+        non_zero_indices = tf.indices_of_first_nonzero_terms_in_each_row()
+        i = len(tf) - 1
+        while (i >= 0):
+            nv = tf[i].normal_vector
+            if not nv.is_zero():
+                indicie_of_coefficient = non_zero_indices[i]
+                coefficient = nv[indicie_of_coefficient]
+                if coefficient != 1:
+                    tf.multiply_coefficient_and_row(1 / coefficient, i)
+                    non_zero_indices = tf.indices_of_first_nonzero_terms_in_each_row()
+                j = 1
+                while (j <=  i):
+                    coefficient = tf.planes[i-j].normal_vector[indicie_of_coefficient]
+                    if coefficient != 0:
+                        tf.add_multiple_times_row_to_row(-1 * coefficient, i, i-j)
+                        non_zero_indices = tf.indices_of_first_nonzero_terms_in_each_row()
+                    j += 1
+            i -= 1
+        return tf
+
+    def do_gaussian_elimination_and_extract_solution(self):
+        rref = self.compute_rref()
+
+        non_zero_coefficients = rref.indices_of_first_nonzero_terms_in_each_row()
+        num_pivots = sum([1 if x >=0 else 0 for x in non_zero_coefficients])
+        solution_coordinates = [''] * self.dimension
+        print(solution_coordinates)
+        for i, p in enumerate(rref):
+            if p.normal_vector.is_zero() and p.constant_term != 0:
+                raise Exception(self.NO_SOLUTIONS_MSG)
+            if non_zero_coefficients[i] >= 0:
+                indicie_of_variable = non_zero_coefficients[i]
+                solution_coordinates[indicie_of_variable] = p.constant_term
+        if num_pivots < rref.dimension:
+            raise Exception(self.INF_SOLUTIONS_MSG)
+        return Vector(solution_coordinates)
 
     def __len__(self):
         return len(self.planes)
@@ -211,6 +248,7 @@ t = s.compute_triangular_form()
 if not (t[0] == p1 and
         t[1] == p2):
     print('Triangular Form: test case 1 failed')
+#print('TF Test1:\n{}'.format(t))
 
 p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
 p2 = Plane(normal_vector=Vector(['1','1','1']), constant_term='2')
@@ -219,6 +257,7 @@ t = s.compute_triangular_form()
 if not (t[0] == p1 and
         t[1] == Plane(constant_term='1')):
     print('Triangular Form: test case 2 failed')
+#print('TF Test2:\n{}'.format(t))
 
 p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
 p2 = Plane(normal_vector=Vector(['0','1','0']), constant_term='2')
@@ -231,6 +270,7 @@ if not (t[0] == p1 and
         t[2] == Plane(normal_vector=Vector(['0','0','-2']), constant_term='2') and
         t[3] == Plane()):
     print('Triangular Form: test case 3 failed')
+#print('TF Test3:\n{}'.format(t))
 
 p1 = Plane(normal_vector=Vector(['0','1','1']), constant_term='1')
 p2 = Plane(normal_vector=Vector(['1','-1','1']), constant_term='2')
@@ -241,3 +281,89 @@ if not (t[0] == Plane(normal_vector=Vector(['1','-1','1']), constant_term='2') a
         t[1] == Plane(normal_vector=Vector(['0','1','1']), constant_term='1') and
         t[2] == Plane(normal_vector=Vector(['0','0','-9']), constant_term='-2')):
     print('Triangular Form: test case 4 failed')
+#print('TF Test4:\n{}'.format(t))
+
+# 21 Quiz: Coding RREF
+p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['0','1','1']), constant_term='2')
+s = LinearSystem([p1,p2])
+r = s.compute_rref()
+if not (r[0] == Plane(normal_vector=Vector(['1','0','0']), constant_term='-1') and
+        r[1] == p2):
+    print('RREF: test case 1 failed')
+
+p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['1','1','1']), constant_term='2')
+s = LinearSystem([p1,p2])
+r = s.compute_rref()
+if not (r[0] == p1 and
+        r[1] == Plane(constant_term='1')):
+    print('RREF: test case 2 failed')
+
+p1 = Plane(normal_vector=Vector(['1','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['0','1','0']), constant_term='2')
+p3 = Plane(normal_vector=Vector(['1','1','-1']), constant_term='3')
+p4 = Plane(normal_vector=Vector(['1','0','-2']), constant_term='2')
+s = LinearSystem([p1,p2,p3,p4])
+r = s.compute_rref()
+if not (r[0] == Plane(normal_vector=Vector(['1','0','0']), constant_term='0') and
+        r[1] == p2 and
+        r[2] == Plane(normal_vector=Vector(['0','0','-2']), constant_term='2') and
+        r[3] == Plane()):
+    print('RREF: test case 3 failed')
+
+p1 = Plane(normal_vector=Vector(['0','1','1']), constant_term='1')
+p2 = Plane(normal_vector=Vector(['1','-1','1']), constant_term='2')
+p3 = Plane(normal_vector=Vector(['1','2','-5']), constant_term='3')
+s = LinearSystem([p1,p2,p3])
+r = s.compute_rref()
+if not (r[0] == Plane(normal_vector=Vector(['1','0','0']), constant_term=Decimal('23')/Decimal('9')) and
+        r[1] == Plane(normal_vector=Vector(['0','1','0']), constant_term=Decimal('7')/Decimal('9')) and
+        r[2] == Plane(normal_vector=Vector(['0','0','1']), constant_term=Decimal('2')/Decimal('9'))):
+    print('RREF: test case 4 failed')
+
+p1 = Plane(Vector(['5.862', '1.178', '-10.366']), '-8.15')
+p2 = Plane(Vector(['-2.931', '-0.589', '5.183']), '-4.075')
+s = LinearSystem([p1,p2])
+r = s.compute_rref()
+print('***first test:***')
+#print('TF:\n{}'.format(s.compute_triangular_form()))
+try:
+    solution = r.do_gaussian_elimination_and_extract_solution()
+    print('RREF:\n{}'.format(Plane(solution)))
+except Exception as e:
+    if str(e) == LinearSystem.NO_SOLUTIONS_MSG or str(e) == LinearSystem.INF_SOLUTIONS_MSG:
+        print(str(e))
+    else: raise e
+
+p1 = Plane(Vector([8.631, 5.112, -1.816]), -5.113)
+p2 = Plane(Vector([4.315, 11.132, -5.27]), -6.775)
+p3 = Plane(Vector([-2.158, 3.01, -1.727]), -0.831)
+s = LinearSystem([p1,p2,p3])
+r = s.compute_rref()
+print('***second test:***')
+#print('TF:\n{}'.format(s.compute_triangular_form()))
+try:
+    solution = r.do_gaussian_elimination_and_extract_solution()
+    print('RREF:\n{}'.format(Plane(solution)))
+except Exception as e:
+    if str(e) == LinearSystem.NO_SOLUTIONS_MSG or str(e) == LinearSystem.INF_SOLUTIONS_MSG:
+        print(e)
+    else: raise e
+
+p1 = Plane(Vector([5.262, 2.739, -9.878]), -3.441)
+p2 = Plane(Vector([5.111, 6.358, 7.638]), -2.152)
+p3 = Plane(Vector([2.016, -9.924, -1.367]), -9.278)
+p4 = Plane(Vector([2.167, -13.543, -18.883]), -10.567)
+s = LinearSystem([p1,p2,p3,p4])
+r = s.compute_rref()
+print('***third test:****')
+#print('TF:\n{}'.format(s.compute_triangular_form()))
+try:
+    solution = r.do_gaussian_elimination_and_extract_solution()
+    print('RREF:\n{}'.format(Plane(solution)))
+except Exception as e:
+    if str(e) == LinearSystem.NO_SOLUTIONS_MSG or str(e) == LinearSystem.INF_SOLUTIONS_MSG:
+        print(e)
+    else: raise e
+
