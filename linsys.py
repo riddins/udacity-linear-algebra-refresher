@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from vector import Vector
 from plane import Plane
+from param import Parametrization
 
 getcontext().prec = 30
 
@@ -85,7 +86,7 @@ class LinearSystem(object):
                     coefficient = -1 * system.planes[i+j].normal_vector[index_of_coefficient] / system[i].normal_vector[index_of_coefficient]
                     system.add_multiple_times_row_to_row(coefficient, i, i+j)
                     non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
-                elif non_zero_indices[i] > non_zero_indices[i+j]:
+                elif non_zero_indices[i+j] >= 0 and (non_zero_indices[i] > non_zero_indices[i+j] or non_zero_indices[i] < 0):
                     system.swap_rows(i, i+j)
                     non_zero_indices = system.indices_of_first_nonzero_terms_in_each_row()
                     swapped = True
@@ -121,19 +122,37 @@ class LinearSystem(object):
     def do_gaussian_elimination_and_extract_solution(self):
         rref = self.compute_rref()
 
-        non_zero_coefficients = rref.indices_of_first_nonzero_terms_in_each_row()
-        num_pivots = sum([1 if x >=0 else 0 for x in non_zero_coefficients])
-        solution_coordinates = [''] * self.dimension
-        print(solution_coordinates)
         for i, p in enumerate(rref):
             if p.normal_vector.is_zero() and p.constant_term != 0:
                 raise Exception(self.NO_SOLUTIONS_MSG)
-            if non_zero_coefficients[i] >= 0:
-                indicie_of_variable = non_zero_coefficients[i]
-                solution_coordinates[indicie_of_variable] = p.constant_term
-        if num_pivots < rref.dimension:
-            raise Exception(self.INF_SOLUTIONS_MSG)
-        return Vector(solution_coordinates)
+        
+        param = Parametrization(rref.extract_base_point(), rref.extract_direction_vectors())        
+        return param 
+
+
+
+    def extract_base_point(self):
+        pivot_indicies = self.indices_of_first_nonzero_terms_in_each_row()
+        coordinates = ['0'] * self.dimension
+        for i,p in enumerate(self.planes):
+            if not p.normal_vector.is_zero():
+                pivot = pivot_indicies[i]
+                coordinates[pivot] = p.constant_term 
+        return Vector(coordinates)
+
+
+    def extract_direction_vectors(self):
+        dir_vec_coords = [['0'] * self.dimension for x in range(self.dimension - 1)]
+        for i in range(self.dimension - 1):
+            dir_vec_coords[i][i+1] = 1
+            for j, p in enumerate(self):
+                pivot = self.indices_of_first_nonzero_terms_in_each_row()[j]
+                nv = p.normal_vector
+                if pivot == i+1:
+                    dir_vec_coords[i][pivot] = 0
+                elif not MyDecimal(nv[i+1]).is_near_zero():
+                    dir_vec_coords[i][pivot] = nv[i+1] * -1
+        return [Vector(c) for c in dir_vec_coords]
 
     def __len__(self):
         return len(self.planes)
@@ -157,6 +176,19 @@ class LinearSystem(object):
         temp = ['Equation {}: {}'.format(i+1,p) for i,p in enumerate(self.planes)]
         ret += '\n'.join(temp)
         return ret
+
+    def print_solutions(self):
+        try:
+            print('\nStart_Solutions\n')
+            print('TF:\n{}\n'.format(self.compute_triangular_form()))
+            print('RREF:\n{}\n'.format(self.compute_rref()))
+            print('PARAM:\n{}\n'.format(self.do_gaussian_elimination_and_extract_solution()))
+            print('End_Solutions\n')
+        except Exception as e:
+            if str(e) == LinearSystem.NO_SOLUTIONS_MSG or str(e) == LinearSystem.INF_SOLUTIONS_MSG:
+                print(e)
+            else: raise e
+
 
 
 class MyDecimal(Decimal):
@@ -325,45 +357,46 @@ if not (r[0] == Plane(normal_vector=Vector(['1','0','0']), constant_term=Decimal
 p1 = Plane(Vector(['5.862', '1.178', '-10.366']), '-8.15')
 p2 = Plane(Vector(['-2.931', '-0.589', '5.183']), '-4.075')
 s = LinearSystem([p1,p2])
-r = s.compute_rref()
 print('***first test:***')
-#print('TF:\n{}'.format(s.compute_triangular_form()))
-try:
-    solution = r.do_gaussian_elimination_and_extract_solution()
-    print('RREF:\n{}'.format(Plane(solution)))
-except Exception as e:
-    if str(e) == LinearSystem.NO_SOLUTIONS_MSG or str(e) == LinearSystem.INF_SOLUTIONS_MSG:
-        print(str(e))
-    else: raise e
 
 p1 = Plane(Vector([8.631, 5.112, -1.816]), -5.113)
 p2 = Plane(Vector([4.315, 11.132, -5.27]), -6.775)
 p3 = Plane(Vector([-2.158, 3.01, -1.727]), -0.831)
 s = LinearSystem([p1,p2,p3])
-r = s.compute_rref()
 print('***second test:***')
-#print('TF:\n{}'.format(s.compute_triangular_form()))
-try:
-    solution = r.do_gaussian_elimination_and_extract_solution()
-    print('RREF:\n{}'.format(Plane(solution)))
-except Exception as e:
-    if str(e) == LinearSystem.NO_SOLUTIONS_MSG or str(e) == LinearSystem.INF_SOLUTIONS_MSG:
-        print(e)
-    else: raise e
+s.print_solutions()
 
 p1 = Plane(Vector([5.262, 2.739, -9.878]), -3.441)
 p2 = Plane(Vector([5.111, 6.358, 7.638]), -2.152)
 p3 = Plane(Vector([2.016, -9.924, -1.367]), -9.278)
 p4 = Plane(Vector([2.167, -13.543, -18.883]), -10.567)
 s = LinearSystem([p1,p2,p3,p4])
-r = s.compute_rref()
 print('***third test:****')
-#print('TF:\n{}'.format(s.compute_triangular_form()))
-try:
-    solution = r.do_gaussian_elimination_and_extract_solution()
-    print('RREF:\n{}'.format(Plane(solution)))
-except Exception as e:
-    if str(e) == LinearSystem.NO_SOLUTIONS_MSG or str(e) == LinearSystem.INF_SOLUTIONS_MSG:
-        print(e)
-    else: raise e
+s.print_solutions()
+
+print('#### LESSON 03.22 Quiz: Coding GE Solution ####\n')
+
+print('--- Problem #1 ---')
+p1 = Plane(Vector([0.786, 0.786, 0.588]), -0.714)
+#p2 = Plane(Vector([-0.138, -0.138, 0.244]), 0.319)
+# incorrect coordinates in lesson per https://discussions.udacity.com/t/coding-parameterization-quiz-incorrect-coefficients/243066
+p2 = Plane(Vector([-0.131, -0.131, 0.244]), 0.319)
+s = LinearSystem([p1, p2])
+s.print_solutions()
+
+print('--- Problem #2 ---')
+p1 = Plane(Vector([8.631, 5.112, -1.816]), -5.113)
+p2 = Plane(Vector([4.315, 11.132, -5.27]), -6.775)
+p3 = Plane(Vector([-2.158, 3.01, -1.727]), -0.831)
+s = LinearSystem([p1, p2, p3])
+s.print_solutions()
+
+print('--- Problem #3 ---')
+p1 = Plane(Vector([0.935, 1.76, -9.365]), -9.955)
+p2 = Plane(Vector([0.187, 0.352, -1.873]), -1.991)
+p3 = Plane(Vector([0.374, 0.704, -3.746]), -3.982)
+p4 = Plane(Vector([-0.561, -1.056, 5.619]), 5.973)
+s = LinearSystem([p1, p2, p3, p4])
+s.print_solutions()
+
 
