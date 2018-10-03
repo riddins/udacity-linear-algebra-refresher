@@ -142,16 +142,18 @@ class LinearSystem(object):
 
 
     def extract_direction_vectors(self):
-        dir_vec_coords = [['0'] * self.dimension for x in range(self.dimension - 1)]
-        for i in range(self.dimension - 1):
-            dir_vec_coords[i][i+1] = 1
+        non_zero_indices = self.indices_of_first_nonzero_terms_in_each_row()
+        free_var_indicies = set(range(self.dimension)) - set(non_zero_indices)
+        num_free_vars = len(free_var_indicies)
+        dir_vec_coords = [['0'] * self.dimension for x in range(num_free_vars)]
+
+        for i, idx in enumerate(free_var_indicies):
+            dir_vec_coords[i][idx] = 1
             for j, p in enumerate(self):
-                pivot = self.indices_of_first_nonzero_terms_in_each_row()[j]
+                pivot = non_zero_indices[j]
                 nv = p.normal_vector
-                if pivot == i+1:
-                    dir_vec_coords[i][pivot] = 0
-                elif not MyDecimal(nv[i+1]).is_near_zero():
-                    dir_vec_coords[i][pivot] = nv[i+1] * -1
+                if not MyDecimal(nv[idx]).is_near_zero():
+                    dir_vec_coords[i][pivot] = nv[idx] * -1
         return [Vector(c) for c in dir_vec_coords]
 
     def __len__(self):
